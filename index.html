@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+
+  .subunit.SCT { fill: #F7CE56; }
+  .subunit.WLS { fill: #4C5459; }
+  .subunit.NIR { fill: #7FF0E8; }
+  .subunit.ENG { fill: #FF806B; }
+  .subunit.IRL { display: none; }
+
+  .subunit-boundary {
+    fill: none;
+    stroke: #777;
+    stroke-dasharray: 2,2;
+    stroke-linejoin: round;
+  }
+
+  .subunit-boundary.IRL {
+    stroke: #aaa;
+  }
+
+  .subunit-label {
+    fill: #777;
+    fill-opacity: .5;
+    font-size: 20px;
+    font-weight: 300;
+    text-anchor: middle;
+  }
+
+  .place,
+  .place-label {
+    fill: #444;
+  }
+
+  text {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    pointer-events: none;
+  }
+
+</style>
+  <head>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+  </head>
+  <body>
+    <script>
+
+      var width = 960;
+      var height = 1160;
+      var projection = d3.geo.albers()
+        .center([0, 55.4])
+        .rotate([4.4, 0])
+        .parallels([50, 60])
+        .scale(6000)
+        .translate([width / 2, height / 2]);
+      var path = d3.geo.path().projection(projection).pointRadius(2);
+      var svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
+
+      // d3 is async so we define variables above
+      d3.json("uk.json", function(error, uk) {
+
+        // Pass data to svg generated on line 59
+        svg.selectAll(".subunit")
+            .data(topojson.feature(uk, uk.objects.subunits).features)
+          .enter().append("path")
+            .attr("class", function(d) { return "subunit " + d.id; })
+            .attr("d", path);
+
+        // Irish coastline 
+        svg.append("path")
+          .datum(topojson.mesh(uk, uk.objects.subunits, function(a, b) { return a === b && a.id === "IRL"; }))
+          .attr("d", path)
+          .attr("class", "subunit-boundary IRL");
+
+        // Country names
+        svg.selectAll(".subunit-label")
+          .data(topojson.feature(uk, uk.objects.subunits).features)
+        .enter().append("text")
+          .attr("class", function(d) { return "subunit-label " + d.id; })
+          .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+          .attr("dy", ".35em")
+          .text(function(d) { return d.properties.name; });
+
+        // Cities
+        svg.append("path")
+          .datum(topojson.feature(uk, uk.objects.places))
+          .attr("d", path)
+          .attr("class", "place");
+
+        // Labels
+        svg.selectAll(".place-label")
+            .data(topojson.feature(uk, uk.objects.places).features)
+          .enter().append("text")
+            .attr("class", "place-label")
+            .attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })
+            .attr("x", function(d) { return d.geometry.coordinates[0] > -1 ? 6 : -6; })
+            .attr("dy", ".35em")
+            .style("text-anchor", function(d) { return d.geometry.coordinates[0] > -1 ? "start" : "end"; })
+            .text(function(d) { return d.properties.name; });
+      });
+
+    </script>
+  </body>
+</html>
